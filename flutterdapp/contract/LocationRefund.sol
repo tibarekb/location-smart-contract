@@ -1,79 +1,59 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.7;
 
-contract RefundContract {
-    address[] public employees;
-    address public employeer;
+contract LocationRefund.sol {
 
-    struct ContractStatus {
-        int8 latitude;
-        int8 longitude;
-        int8 maxRadius;
-        uint8 payment;
-        uint8 compCount;
-        uint8 reqAmount;
-    }
-    mapping (address => ContractStatus) public empContractStatus;
-    constructor() {
-        employeer = msg.sender;
-    }
-    
-    modifier onlyEmployeer() {
-        require(msg.sender == employeer, "Only employeer has access to this function");
-        _;
+    address payable employee;
+    address payable employer;
+
+    struct Employee{
+        string employeeName;
+        bool paid;
+        bool done;
+        uint timestamp;
+        uint payment;
+        string employee_address;
+        uint latitude;
+        uint longtude;
+        address payable employee;
+        address payable employer;
+        uint no_of_jobs
+
     }
 
-    modifier onlyEmployee(address _addr) {
+    mapping (uint => Employee) public Request_Number;
 
-        bool exists = false;
+    //to check if the sender is an employer
 
-        if(msg.sender == _addr){
-            exists = true;
-        }
-
-        for (uint256 i = 0; i < employees.length; i++) {
-            if (employees[i] == _addr) {
-                exists = true;
-                break;
-            }
-        }
-
-        require(exists, "");
-        _;
+    modifier onlyEmployer(uint _index)  {
+        require(msg.sender == Request_Number[_index].employer, "Only Employer can access this");
     }
 
-    function payEmployee(address payable _to) public payable onlyEmployee(_to) {
-        require(empContractStatus[_to].compCount > empContractStatus[_to].reqAmount,"The employee did not remain in compliance with all the agreements.");
-        bool sent = _to.send(empContractStatus[_to].payment);
-        require(sent, "Failed to send Ether");
+    //to check if the sender is an employer
+
+    modifier onlyNotDone(uint _index)  {
+        require(Request_Number[_index].done == false, "The job is not currently available");
     }
 
-        
-    // only employer has access
-    function setEmployeeAccount(
-        address _empAddr,
-        int8 _latitude,
-        int8 _longitude,
-        int8 _maxRadius,
-        uint8 _payAmount,
-        uint8 _reqAmount
-        // Should also set the duration the contract will be checking for
-        ) public onlyEmployeer() {
-            employees.push(_empAddr); // should delete if it is already in the list
-            empContractStatus[_empAddr].latitude = _latitude;
-            empContractStatus[_empAddr].longitude = _longitude;
-            empContractStatus[_empAddr].maxRadius = _maxRadius;
-            empContractStatus[_empAddr].payment = _payAmount;
-            empContractStatus[_empAddr].compCount = 0;
-            empContractStatus[_empAddr].reqAmount = _reqAmount;
+    //to check if the sender has enough money 
+    modifier enoughpayment(uint _index)  {
+        require(msg.value >= uint(Request_Number[_index].payment), "Not enough Ether in your waller);
     }
 
-    function getAdmin() public view returns(address) {
-        return employeer;
+    function addJob(string memory _jobname, uint memory _joblatitude, uint _payment, uint _joblongtude) public {
+        require(msg.sender != address(0));
+        no_of_jobs ++;
+        bool done = false;
+        Request_Number[no_of_jobs] = Employee(_no_of_jobs, _jobname , _joblatitude, _payment, _joblongtude, msg.sender,address(0))
     }
 
-
-    function getEmployees() public view returns(address[] memory){
-        return employees;
+    function payment(uint _index) public payable enoughpayment(_index) onlyNotDone(_index){
+        require(msg.sender == address(0));
+        address payable _employer = Request_Number[_index].employer;
+        uint totalfee = Request_Number[_index].payment
+        _employer.transfer(totalfee);
+        Request_Number[_index].employer = msg.sender;
+        Request_Number[_index].done = true;
+        Request_Number[_index].timestamp = block.timestamp;
     }
 }
